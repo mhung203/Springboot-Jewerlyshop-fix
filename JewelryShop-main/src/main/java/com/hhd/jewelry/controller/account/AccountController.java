@@ -191,9 +191,22 @@ public class AccountController {
 
     @GetMapping("/account/orders/detail/{orderId}")
     @Transactional(readOnly = true)
-    public ResponseEntity<Order> getOrderDetail(@PathVariable("orderId") Integer orderId) {
-        Order order = orderService.getOrderByOrderId(orderId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "Không tìm thấy đơn hàng với ID: " + orderId));
+    public ResponseEntity<Order> getOrderDetail(@PathVariable("orderId") Integer orderId,
+                                                Authentication auth) {
+        Order order = orderService.getOrderByOrderId(orderId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Không tìm thấy đơn hàng với ID: " + orderId
+                ));
+
+        User currentUser = userService.findByEmail(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Người dùng không hợp lệ"
+                ));
+        if (order.getUser() == null || !order.getUser().getId().equals(currentUser.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn hàng này");
+        }
         return ResponseEntity.ok(order);
     }
     private void updateAuthentication(String newEmail, Authentication oldAuth, HttpServletRequest request) {

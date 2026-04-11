@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,10 +21,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 import java.io.IOException;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -53,6 +55,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, UserDetailsService uds) throws Exception {
         http
+                // ✅ BẮT BUỘC HTTPS cho tất cả requests (trừ static resources)
+                .requiresChannel(channel -> channel
+                        .anyRequest()
+                        .requiresSecure()  // Tất cả requests phải dùng HTTPS
+                )
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/assets/**").permitAll()
                         .requestMatchers("/", "/login", "/register", "/register/**", "/details/**", "/products/**", "/forgot-password/**","/ws-chat/**", "/topic/**", "/app/**" ).permitAll()
@@ -60,6 +67,27 @@ public class SecurityConfig {
                         .requestMatchers("/manager/**").hasRole("MANAGER")
                         .requestMatchers("/client_1/**").hasRole("USER")
                         .anyRequest().authenticated()
+                )
+                .headers(headers -> headers
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)
+                        )
+                )
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp
+                        .policyDirectives(
+                                "default-src 'self'; " +
+                                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                                "img-src 'self' data: https:; " +
+                                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                                 "connect-src 'self' https://localhost:8443 ws: wss: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                                 "frame-ancestors 'self'; " +
+                                "base-uri 'self'; " +
+                                "object-src 'none';"
+                         )
+                        )
                 )
                 .formLogin(f -> f
                         .loginPage("/login")
@@ -79,14 +107,10 @@ public class SecurityConfig {
                         .logoutSuccessHandler(customLogoutSuccessHandler())
                         .deleteCookies("JSESSIONID", "remember-me")
                         .permitAll()
-                )
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 );
-
+        
         return http.build();
     }
-    // Ghi log khi đăng nhập thành công
     @Bean
     public AuthenticationSuccessHandler roleBasedSuccessHandler() {
         return new AuthenticationSuccessHandler() {

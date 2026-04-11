@@ -122,8 +122,8 @@
 
     </style>
 
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" integrity="sha384-svdnwiXBL+Js+yUneJSRFy24NgGiOfDM/vkQl/vCeVrcbYD6yW8EwPr1FnxTEZsR" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" integrity="sha384-clKAk7WaYNQiu/pGVWisoFQcSK2VL7YweoI1gim9/HFbMsRvD2ZtLWNoZoL4df65" crossorigin="anonymous"></script>
 
     <script>
         // Đặt script trong một hàm để tránh xung đột
@@ -227,7 +227,9 @@
                 const userItem = document.createElement('div');
                 userItem.classList.add('user-item');
                 userItem.dataset.sessionId = sessionId;
-                userItem.innerHTML = `<span>Khách: ${shortId}...</span>`;
+                const label = document.createElement('span');
+                label.textContent = `Khách: ${shortId}...`;
+                userItem.appendChild(label);
                 userItem.onclick = () => selectUser(sessionId);
                 userItemsContainer.appendChild(userItem);
             }
@@ -291,7 +293,15 @@
                 const senderType = (sender === 'Khách hàng') ? 'user' : 'admin';
 
                 msgDiv.classList.add('msg', senderType);
-                msgDiv.innerHTML = `<strong>${sender}:</strong><div class="content">${content}</div>`;
+                const strong = document.createElement('strong');
+                strong.textContent = `${sender}:`;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('content');
+                contentDiv.textContent = content ?? '';
+
+                msgDiv.appendChild(strong);
+                msgDiv.appendChild(contentDiv);
 
                 chatMessages.appendChild(msgDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight; // Tự cuộn
